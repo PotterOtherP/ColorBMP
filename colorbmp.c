@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
 	free(argos);	
 
 
-	char* filename = "colorimgbmp";
+	char* filename = "colorimg.bmp";
 
 	FILE* file = fopen(filename, "w");
 
