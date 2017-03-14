@@ -201,14 +201,6 @@ int main(int argc, char* argv[])
 	// add padding to the end of the pixel array.
 	// NOTE: Padding does not seem to be necessary.
 
-	/*
-	int8 pad = 0;
-	for (i = 0; i < (8 - ((numPixels*3) % 8)); ++i)
-	{
-		fwrite(&pad, sizeof(int8), 1, file);
-	}
-	*/
-
 
 	// Create and fill in the info for the headers.
 
@@ -246,6 +238,7 @@ int main(int argc, char* argv[])
 	fwrite(PixelArray, sizeof(struct Pixel), numPixels, file);
 
 
+	// free all the memory reserved by malloc
 
 	free(PixelArray);
 	free(Header);
