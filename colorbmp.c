@@ -145,9 +145,6 @@ int main(int argc, char* argv[])
 
 	int numPixels = width*height;
 
-	printf("Width: %d Height: %d Pixels: %d Color: %d\n", width, height, numPixels, color);
-
-
 	/*
 		Info we need to write into the file:
 
