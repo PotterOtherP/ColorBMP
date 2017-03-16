@@ -107,9 +107,9 @@ struct arguments* ProcessArgs(int argc, char* argv[])
 	if (argv[3][0] == 'r')
 		args->color = RED;
 	if (argv[3][0] == 'g')
-		args->color = BLUE;
-	if (argv[3][0] == 'b')
 		args->color = GREEN;
+	if (argv[3][0] == 'b')
+		args->color = BLUE;
 
 	switch(args->color)
 	{
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 	struct BitmapHeader* Header = malloc(sizeof(struct BitmapHeader));
 	Header->FileSize = 0; // calculate this after image size in the struct below.
 	Header->Reserved = 0;
-	Header->PixelOffset = 54;
+	Header->PixelOffset = 0;
 
 	struct DIBHeader* DHeader = malloc(sizeof(struct DIBHeader));
 	DHeader->DIBHeaderSize = sizeof(struct DIBHeader);
@@ -253,7 +253,9 @@ int main(int argc, char* argv[])
 
 	// Now calculate file size
 	Header->FileSize = sizeof(struct TwoByte) + sizeof(struct BitmapHeader)
-   + sizeof(struct DIBHeader) + DHeader->ImageSize;
+   			+ sizeof(struct DIBHeader) + DHeader->ImageSize;
+   	Header->PixelOffset = sizeof(struct TwoByte) + sizeof(struct BitmapHeader)
+   			+ sizeof(struct DIBHeader);
 
 
 	// Write all of the data to the file in the correct order
