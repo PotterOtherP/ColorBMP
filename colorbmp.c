@@ -9,12 +9,18 @@
 	 - Add the ability to pass in RGB values from the command line.
 	 - Name the output file according to its color.
 
+	 for reference: https://jonasjacek.github.io/colors/
+
 */
 
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+
+#define RED 1
+#define GREEN 2
+#define BLUE 3
 
 typedef int8_t int8;
 
@@ -62,6 +68,9 @@ struct DIBHeader
 
 };
 
+// Global variables
+static int width;
+static int height;
 
 
 
@@ -96,17 +105,17 @@ struct arguments* ProcessArgs(int argc, char* argv[])
 	}
 
 	if (argv[3][0] == 'r')
-		args->color = 1;
+		args->color = RED;
 	if (argv[3][0] == 'g')
-		args->color = 2;
+		args->color = BLUE;
 	if (argv[3][0] == 'b')
-		args->color = 3;
+		args->color = GREEN;
 
 	switch(args->color)
 	{
-		case 1:
-		case 2:
-		case 3:
+		case RED:
+		case GREEN:
+		case BLUE:
 			break;
 		default:
 		{
@@ -118,6 +127,29 @@ struct arguments* ProcessArgs(int argc, char* argv[])
 
 	return args;
 };
+
+
+// Color a single pixel at (x,y) with an RGB value.
+void WritePixel(void* Array, int x, int y, int8 r, int8 g, int8 b)
+{
+	struct Pixel p;
+	p.r = r;
+	p.g = g;
+	p.b = b;
+
+	struct Pixel* ptr = (struct Pixel*)(Array);
+
+
+	// get ptr to the right place
+	ptr += (width*y);
+	ptr += x;
+
+
+	*ptr = p;
+
+}
+
+
 
 
 
@@ -132,18 +164,11 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	int width = argos->width;
-	int height = argos->height;
+	width = argos->width;
+	height = argos->height;
 	int color = argos->color;
 
 	free(argos);	
-
-
-	char* filename = "colorimg.bmp";
-
-	FILE* file = fopen(filename, "w");
-
-	int numPixels = width*height;
 
 	/*
 		Info we need to write into the file:
@@ -183,13 +208,14 @@ int main(int argc, char* argv[])
 
 	// Create the pixel array and fill it monochromatically
 
+	int numPixels = width*height;
 	void* PixelArray = malloc(numPixels*sizeof(struct Pixel));
 	struct Pixel* pixptr = (struct Pixel*)(PixelArray);
 
 	struct Pixel p;
-	p.r = (color == 1? 0xff : 0);
-	p.g = (color == 2? 0xff : 0);
-	p.b = (color == 3? 0xff : 0);
+	p.r = (color == RED? 0xff : 0);
+	p.g = (color == GREEN? 0xff : 0);
+	p.b = (color == BLUE? 0xff : 0);
 
 	int i = 0;
 	for (i = 0; i < numPixels; ++i)
@@ -227,10 +253,13 @@ int main(int argc, char* argv[])
 
 	// Now calculate file size
 	Header->FileSize = sizeof(struct TwoByte) + sizeof(struct BitmapHeader)
-					   + sizeof(struct DIBHeader) + DHeader->ImageSize;
+   + sizeof(struct DIBHeader) + DHeader->ImageSize;
 
 
 	// Write all of the data to the file in the correct order
+
+	char* filename = "colorimg.bmp";
+	FILE* file = fopen(filename, "w");
 
 	fwrite(FileSig, sizeof(struct TwoByte), 1, file);
 	fwrite(Header, sizeof(struct BitmapHeader), 1, file);
