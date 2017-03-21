@@ -6,13 +6,10 @@
 
 	TODO:
 
-	 - Add the ability to pass in RGB values from the command line.
+	 - Add the ability to pass in RGB values from the command line. (done)
 	 - Name the output file according to its color.
 
-	 for reference: https://jonasjacek.github.io/colors/
-
 */
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,13 +19,24 @@
 #define GREEN 2
 #define BLUE 3
 
+
 typedef int8_t int8;
+
+// Global variables
+static int width;
+static int height;
+
+enum Mode {MONO, MULTI};
 
 struct arguments
 {
+	enum Mode mode;
 	int width;
 	int height;
 	int color;
+	int red;
+	int green;
+	int blue; 
 };
 
 struct TwoByte
@@ -40,6 +48,7 @@ struct TwoByte
 
 struct Pixel
 {
+	// Blue comes first due to little-endianness.
 	int8 b;
 	int8 g;
 	int8 r;
@@ -68,9 +77,9 @@ struct DIBHeader
 
 };
 
-// Global variables
-static int width;
-static int height;
+
+
+
 
 
 
@@ -83,11 +92,18 @@ struct arguments* ProcessArgs(int argc, char* argv[])
 	args->height = 0;
 	args->color = 0;
 
-	if (argc != 4)
+	if (argc != 4 && argc != 6)
 	{
 		printf("USAGE: ./colorbmp WIDTH HEIGHT COLOR(\"red\", \"green\", or \"blue\")\n");
+		printf("OR ./colorbmp WIDTH HEIGHT R G B (0 - 255)\n");
 		return NULL;
 	}
+
+	if (argc == 4)
+		args->mode = MONO;
+	if (argc == 6)
+		args->mode = MULTI;
+
 
 	args->width = atoi(argv[1]);
 	args->height = atoi(argv[2]);
@@ -104,24 +120,35 @@ struct arguments* ProcessArgs(int argc, char* argv[])
 		return NULL;
 	}
 
-	if (argv[3][0] == 'r')
-		args->color = RED;
-	if (argv[3][0] == 'g')
-		args->color = GREEN;
-	if (argv[3][0] == 'b')
-		args->color = BLUE;
-
-	switch(args->color)
+	if (args->mode == MONO)
 	{
-		case RED:
-		case GREEN:
-		case BLUE:
-			break;
-		default:
+		if (argv[3][0] == 'r')
+			args->color = RED;
+		if (argv[3][0] == 'g')
+			args->color = GREEN;
+		if (argv[3][0] == 'b')
+			args->color = BLUE;
+
+		switch(args->color)
 		{
-			printf("Just type \"red\", \"green\", or \"blue\" for the color. \n");
-			return NULL;
+			case RED:
+			case GREEN:
+			case BLUE:
+				break;
+			default:
+			{
+				printf("Just type \"red\", \"green\", or \"blue\" for the color. \n");
+				return NULL;
+			}
 		}
+	}
+
+	if (args->mode == MULTI)
+	{
+		args->red = atoi(argv[3]);
+		args->green = atoi(argv[4]);
+		args->blue = atoi(argv[5]);
+		args->color = 0;
 	}
 
 
@@ -167,6 +194,7 @@ int main(int argc, char* argv[])
 	width = argos->width;
 	height = argos->height;
 	int color = argos->color;
+	enum Mode mode = argos->mode;
 
 	free(argos);	
 
@@ -213,9 +241,21 @@ int main(int argc, char* argv[])
 	struct Pixel* pixptr = (struct Pixel*)(PixelArray);
 
 	struct Pixel p;
-	p.r = (color == RED? 0xff : 0);
-	p.g = (color == GREEN? 0xff : 0);
-	p.b = (color == BLUE? 0xff : 0);
+
+	if (mode == MONO)
+	{
+		p.r = (color == RED? 0xff : 0);
+		p.g = (color == GREEN? 0xff : 0);
+		p.b = (color == BLUE? 0xff : 0);
+	}
+
+	if (mode == MULTI)
+	{
+		p.r = argos->red;
+		p.g = argos->green;
+		p.b = argos->blue;
+	}
+	
 
 	int i = 0;
 	for (i = 0; i < numPixels; ++i)
@@ -243,7 +283,14 @@ int main(int argc, char* argv[])
 	DHeader->DIBHeaderSize = sizeof(struct DIBHeader);
 	DHeader->ImageWidth = width;
 	DHeader->ImageHeight = height;
-	DHeader->PlanesAndBPP = 0x1 | 0x180000; // probably have to | two numbers together?
+	/* The struct requires 4 bytes for the number of planes
+	   and four bytes for the bits per pixel. We are going to 
+	   or these together into one int so we can have every member
+	   of the DIB Header struct be an 8-byte int. If we put 4-byte
+	   members in the struct, it would pad them out to 8 bytes
+	   and mess up the digits we want in the BMP file.
+	*/
+	DHeader->PlanesAndBPP = 0x1 | 0x180000;
 	DHeader->Compression = 0;
 	DHeader->ImageSize = width*height*sizeof(struct Pixel); // number of pixels * bits per pixel (plus padding?)
 	DHeader->Xppm = 0xec4; // how to determine these?
